@@ -124,7 +124,7 @@ namespace Movies_crawler
 
         static void Main(string[] args)
         {
-            Directory.CreateDirectory("../../data");
+            Directory.CreateDirectory("../../../../data");
             using (var client = new HttpClient())
             {
                 for (int i = 1; i <= MovieTitles.Count; i++)
