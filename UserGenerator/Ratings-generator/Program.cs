@@ -40,13 +40,15 @@ namespace Ratings_generator
             // Generate 100 random users
             GenerateRatings(1001, 100, MoviesCategory.Drama | MoviesCategory.Action | MoviesCategory.Comedy | MoviesCategory.Horror | MoviesCategory.Fantasy, RatingsValue.Random, 20);
 
-            // Make an ATTACK!!! 
-            // Add 100 fake drama lovers that rate highly 1 film from another category
-            GenerateRatings(1101, 100, MoviesCategory.Drama, RatingsValue.Positive, 60);
-            // movie with index 21 is a comedy
-            GenerateRatings(1101, 100, 21, RatingsValue.Positive);
+            //// Make an ATTACK!!! 
+            // Add 50 fake drama lovers that rate highly 1 film from another category
+            var attackSize = 500;
+            GenerateRatings(1101, attackSize, MoviesCategory.Drama, RatingsValue.Positive, 60);
+            GenerateRatings(1101, attackSize, MoviesCategory.Fantasy | MoviesCategory.Horror | MoviesCategory.Comedy | MoviesCategory.Action, RatingsValue.Negative, 10);
+            // movie with index 21 is an action
+            GenerateRatings(1101, attackSize, 21, RatingsValue.Positive);
 
-            using (TextWriter writer = File.CreateText("../../ratings.csv"))
+            using (TextWriter writer = File.CreateText("../../../../ratings-attack.csv"))
             {
                 var csv = new CsvWriter(writer);
                 csv.WriteRecords(records);
