@@ -1,6 +1,8 @@
 import gensim
 import os
 import json
+import csv
+from functools import reduce
 from nltk.tokenize import RegexpTokenizer
 from nltk.corpus import stopwords
 
@@ -21,22 +23,39 @@ from nltk.corpus import stopwords
 # print("vector of the word 'deadly'" % model['deadly'])
 # print("model.similarity('game', 'battle') is %s" % model.similarity('game', 'battle'))
 
+recUserId = "1"
 tokenizer = RegexpTokenizer(r'\w+')
+
+def getUserRatings(userId):
+    result=[]
+    with open('ratings-normal.csv', 'r') as csvfile:
+        reader = csv.reader(csvfile, delimiter=',')
+        for row in reader:
+            if row[0] == userId:
+                result.append(row[1:])
+    return result
+
+def getMostPopularWords(dct, corpus, startIndex, endIndex):
+    wordIndexes = list(map(lambda x: list(reversed(sorted(x,  key=lambda tup: tup[1])))[0][0], corpus[startIndex:endIndex]))
+    return list(map(lambda x: dct[x], wordIndexes))
+
 def getWords(plot):
     result = tokenizer.tokenize(plot)
     result = filter(lambda w: w not in stopwords.words('english'), result)
     return list(map(lambda w: w.lower(), result))
 
 dirName = "data"
-queryStr = ""
+plotsDict = {}
+titlesDict = {}
 plots = []
 for fname in os.listdir(dirName):
     fpath = os.path.join(dirName, fname)
     fhandle = open(fpath, 'r', encoding="utf8")
     contents = json.load(fhandle)
+    currentIndex = int(fname[:-5])
     text = contents['Plot']
-    if fname in ["0" + str(ind) + ".json" for ind in range(61, 66)]:
-        queryStr += text
+    plotsDict[currentIndex] = text
+    titlesDict[currentIndex] = contents['Title']
     plots.append(text)
 
 gen_docs = list(map(getWords, plots))
@@ -51,13 +70,27 @@ tf_idf = gensim.models.TfidfModel(corpus)
 sims = gensim.similarities.SparseMatrixSimilarity(
     tf_idf[corpus], num_features=len(dictionary))
 
-print(queryStr)
+userRatings = getUserRatings(recUserId)
+goodUserRatings = list(filter(lambda ur: float(ur[1]) > 4, userRatings))
+goodUserMovieIndexes = list(map(lambda ur: int(ur[0]), goodUserRatings))
+queryStr = reduce(lambda accum, curr: accum + " " + plotsDict[curr], goodUserMovieIndexes, "")
 query_doc = getWords(queryStr)
 query_doc_bow = dictionary.doc2bow(query_doc)
-# query_doc_bow = [(2158, 5), (2194, 1), (2196, 3), (2228, 2), (2198, 2)]
 query_doc_tf_idf = tf_idf[query_doc_bow]
 
 sim_matrix = sims[query_doc_tf_idf]
-print(sim_matrix)
 sortedM = list(reversed(sorted(range(len(sim_matrix)), key=lambda i: sim_matrix[i])))
-print(sortedM)
+top5 = []
+for ind in sortedM:
+    movieIndex = ind + 1
+    if movieIndex not in goodUserMovieIndexes:
+        top5.append(movieIndex)
+    if len(top5) == 5:
+        break
+
+likedMovieTitles = list(map(lambda m: titlesDict[m], goodUserMovieIndexes))
+recMovieTitles = list(map(lambda m: titlesDict[m], top5))
+
+print(top5)
+print("User likes \n%s\n\n" % "\n".join(likedMovieTitles))
+print("Recommended \n%s\n\n" % "\n".join(recMovieTitles))
